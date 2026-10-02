@@ -4,14 +4,24 @@ import requests
 app = Flask(__name__)
 
 
+# -----------------------------------
+# GET CITY WEATHER DATA
+# -----------------------------------
 def get_city_data(city_name):
     try:
-        # City search
+        city_name = city_name.strip()
+
+        if not city_name:
+            return None
+
+        # -----------------------------------
+        # 1. CITY SEARCH
+        # -----------------------------------
         search_url = "https://geocoding-api.open-meteo.com/v1/search"
 
         search_params = {
             "name": city_name,
-            "count": 1,
+            "count": 10,
             "language": "en",
             "format": "json"
         }
@@ -19,48 +29,105 @@ def get_city_data(city_name):
         response = requests.get(
             search_url,
             params=search_params,
-            timeout=10
+            timeout=15,
+            headers={
+                "User-Agent": "City-Comparison-Explorer/1.0"
+            }
         )
 
+        print("City Search Status:", response.status_code)
+        print("City Search URL:", response.url)
+
         response.raise_for_status()
+
         data = response.json()
 
-        if "results" not in data or not data["results"]:
+        print("City Search Response:", data)
+
+        results = data.get("results", [])
+
+        if not results:
             return None
 
-        city = data["results"][0]
+        # -----------------------------------
+        # 2. SELECT BEST CITY RESULT
+        # -----------------------------------
+        city = None
+
+        # First try exact city-name match
+        for result in results:
+            if result.get("name", "").lower() == city_name.lower():
+                city = result
+                break
+
+        # Otherwise use first result
+        if city is None:
+            city = results[0]
 
         latitude = city.get("latitude")
         longitude = city.get("longitude")
 
-        # Weather data
+        if latitude is None or longitude is None:
+            return None
+
+        # -----------------------------------
+        # 3. WEATHER DATA
+        # -----------------------------------
         weather_url = "https://api.open-meteo.com/v1/forecast"
 
         weather_params = {
             "latitude": latitude,
             "longitude": longitude,
-            "current": "temperature_2m,relative_humidity_2m,wind_speed_10m",
+            "current": (
+                "temperature_2m,"
+                "relative_humidity_2m,"
+                "wind_speed_10m"
+            ),
             "timezone": "auto"
         }
 
         weather_response = requests.get(
             weather_url,
             params=weather_params,
-            timeout=10
+            timeout=15,
+            headers={
+                "User-Agent": "City-Comparison-Explorer/1.0"
+            }
         )
+
+        print("Weather Status:", weather_response.status_code)
+        print("Weather URL:", weather_response.url)
 
         weather_response.raise_for_status()
 
         weather_data = weather_response.json()
+
+        print("Weather Response:", weather_data)
+
         current = weather_data.get("current", {})
 
+        # -----------------------------------
+        # 4. RETURN CITY DATA
+        # -----------------------------------
         return {
             "name": city.get("name", "Unknown"),
-            "country": city.get("country", "Unknown"),
-            "country_code": city.get("country_code", ""),
-            "population": city.get("population"),
+
+            "country": city.get(
+                "country",
+                "Unknown"
+            ),
+
+            "country_code": city.get(
+                "country_code",
+                ""
+            ),
+
+            "population": city.get(
+                "population"
+            ),
 
             "latitude": latitude,
+
             "longitude": longitude,
 
             "timezone": city.get(
@@ -81,13 +148,22 @@ def get_city_data(city_name):
             )
         }
 
+    except requests.exceptions.RequestException as e:
+
+        print("API Request Error:", e)
+
+        return None
+
     except Exception as e:
 
-        print("Error:", e)
+        print("General Error:", e)
 
         return None
 
 
+# -----------------------------------
+# COMPARE CITIES
+# -----------------------------------
 def compare_cities(city1, city2):
 
     comparison = []
@@ -114,10 +190,13 @@ def compare_cities(city1, city2):
             )
 
             if key == "population":
+
                 difference = int(
                     round(difference)
                 )
+
             else:
+
                 difference = round(
                     difference,
                     2
@@ -133,6 +212,9 @@ def compare_cities(city1, city2):
     return comparison
 
 
+# -----------------------------------
+# HOME PAGE
+# -----------------------------------
 @app.route("/")
 def home():
 
@@ -145,6 +227,9 @@ def home():
     )
 
 
+# -----------------------------------
+# COMPARE PAGE - GET
+# -----------------------------------
 @app.route(
     "/compare",
     methods=["GET"]
@@ -160,6 +245,9 @@ def compare_page():
     )
 
 
+# -----------------------------------
+# COMPARE CITIES - POST
+# -----------------------------------
 @app.route(
     "/compare",
     methods=["POST"]
@@ -176,6 +264,7 @@ def compare():
         ""
     ).strip()
 
+    # Empty city check
     if not city1_name or not city2_name:
 
         return render_template(
@@ -186,14 +275,17 @@ def compare():
             error="Please enter both city names."
         )
 
+    # Get city 1
     city1 = get_city_data(
         city1_name
     )
 
+    # Get city 2
     city2 = get_city_data(
         city2_name
     )
 
+    # City 1 error
     if city1 is None:
 
         return render_template(
@@ -201,9 +293,14 @@ def compare():
             city1=None,
             city2=None,
             comparison=None,
-            error=f"Could not find city: {city1_name}"
+            error=(
+                f"Could not find city: "
+                f"{city1_name}. "
+                f"Please check the city name."
+            )
         )
 
+    # City 2 error
     if city2 is None:
 
         return render_template(
@@ -211,14 +308,20 @@ def compare():
             city1=None,
             city2=None,
             comparison=None,
-            error=f"Could not find city: {city2_name}"
+            error=(
+                f"Could not find city: "
+                f"{city2_name}. "
+                f"Please check the city name."
+            )
         )
 
+    # Compare
     comparison = compare_cities(
         city1,
         city2
     )
 
+    # Show result
     return render_template(
         "index.html",
         city1=city1,
@@ -228,8 +331,13 @@ def compare():
     )
 
 
+# -----------------------------------
+# RUN APPLICATION
+# -----------------------------------
 if __name__ == "__main__":
 
     app.run(
+        host="0.0.0.0",
+        port=5000,
         debug=True
     )
