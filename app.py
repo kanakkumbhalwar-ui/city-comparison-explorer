@@ -1,184 +1,131 @@
+```python
 from flask import Flask, render_template, request
 import requests
+import time
+from functools import wraps
 
 app = Flask(__name__)
 
-def get_city_data(city_name):
-    city_name = city_name.strip()
+# Cache city data to reduce repeated API requests
+CITY_CACHE = {}
+CACHE_DURATION = 600  # 10 minutes
 
-    if not city_name:
+GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
+WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
+
+
+def get_city_data(city):
+    city = city.strip()
+
+    if not city:
         return None, "Please enter a city name."
 
+    cache_key = city.lower()
+    now = time.time()
+
+    # Return cached data if it is still valid
+    cached = CITY_CACHE.get(cache_key)
+    if cached and now - cached["time"] < CACHE_DURATION:
+        return cached["data"], None
+
     try:
-        search_url = "https://geocoding-api.open-meteo.com/v1/search"
-        search_params = {
-            "name": city_name,
-            "count": 10,
-            "language": "en",
-            "format": "json"
-        }
-
-        response = requests.get(search_url, params=search_params, timeout=20)
-        response.raise_for_status()
-        data = response.json()
-
-        results = data.get("results") or []
-        if not results:
-            return None, f"No city results found for '{city_name}'."
-
-        city = next(
-            (item for item in results
-             if item.get("name", "").casefold() == city_name.casefold()
-             and item.get("country_code") == "IN"),
-            None
+        geo_response = requests.get(
+            GEOCODING_URL,
+            params={"name": city, "count": 1, "language": "en", "format": "json"},
+            timeout=15
         )
 
-        if city is None:
-            city = results[0]
+        if geo_response.status_code == 429:
+            return None, "Weather service is busy. Please wait a minute and try again."
 
-        latitude = city.get("latitude")
-        longitude = city.get("longitude")
+        geo_response.raise_for_status()
+        geo_json = geo_response.json()
+        results = geo_json.get("results", [])
 
-        if latitude is None or longitude is None:
-            return None, "City coordinates were not available."
+        if not results:
+            return None, f"Could not find city: {city}"
 
-        weather_url = "https://api.open-meteo.com/v1/forecast"
-        weather_params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "current": "temperature_2m,relative_humidity_2m,wind_speed_10m",
-            "timezone": "auto"
-        }
+        place = results[0]
+        latitude = place["latitude"]
+        longitude = place["longitude"]
+        city_name = place.get("name", city)
+        country = place.get("country", "")
 
         weather_response = requests.get(
-            weather_url, params=weather_params, timeout=20
+            WEATHER_URL,
+            params={
+                "latitude": latitude,
+                "longitude": longitude,
+                "current": (
+                    "temperature_2m,relative_humidity_2m,"
+                    "apparent_temperature,is_day,precipitation,"
+                    "weather_code,wind_speed_10m"
+                ),
+                "daily": "weather_code,temperature_2m_max,temperature_2m_min",
+                "timezone": "auto",
+                "forecast_days": 5
+            },
+            timeout=20
         )
+
+        if weather_response.status_code == 429:
+            return None, "Weather service is busy. Please wait a minute and try again."
+
         weather_response.raise_for_status()
-        weather_data = weather_response.json()
-        current = weather_data.get("current")
+        weather_json = weather_response.json()
 
-        if not current:
-            return None, "Weather data was not available."
-
-        return {
-            "name": city.get("name", city_name),
-            "country": city.get("country", "Unknown"),
-            "country_code": city.get("country_code", ""),
-            "population": city.get("population"),
+        data = {
+            "city": city_name,
+            "country": country,
             "latitude": latitude,
             "longitude": longitude,
-            "timezone": city.get("timezone", "Unknown"),
-            "temperature": current.get("temperature_2m"),
-            "humidity": current.get("relative_humidity_2m"),
-            "wind": current.get("wind_speed_10m")
-        }, None
+            "current": weather_json.get("current", {}),
+            "daily": weather_json.get("daily", {}),
+            "timezone": weather_json.get("timezone", "")
+        }
 
-    except requests.exceptions.RequestException as error:
-        print("API REQUEST ERROR:", repr(error))
-        return None, "Weather service is temporarily unavailable. Please try again."
+        CITY_CACHE[cache_key] = {"time": now, "data": data}
+        return data, None
 
-    except Exception as error:
-        print("GENERAL ERROR:", repr(error))
-        return None, "Something went wrong while getting city data."
-
-
-def compare_cities(city1, city2):
-    comparison = []
-
-    parameters = [
-        ("Temperature", "temperature"),
-        ("Humidity", "humidity"),
-        ("Wind Speed", "wind"),
-        ("Population", "population")
-    ]
-
-    for label, key in parameters:
-        value1 = city1.get(key)
-        value2 = city2.get(key)
-
-        if isinstance(value1, (int, float)) and isinstance(value2, (int, float)):
-            difference = abs(value1 - value2)
-            if key == "population":
-                difference = int(round(difference))
-            else:
-                difference = round(difference, 2)
-
-            comparison.append({
-                "parameter": label,
-                "city1": value1,
-                "city2": value2,
-                "difference": difference
-            })
-
-    return comparison
+    except requests.RequestException as error:
+        app.logger.error("API REQUEST ERROR: %s", error)
+        return None, "Weather service is temporarily unavailable. Please try again shortly."
+    except (ValueError, KeyError, TypeError) as error:
+        app.logger.error("DATA PROCESSING ERROR: %s", error)
+        return None, "Weather data could not be processed. Please try again."
 
 
 @app.route("/")
 def home():
-    return render_template(
-        "index.html",
-        city1=None,
-        city2=None,
-        comparison=None,
-        error=None
-    )
-
-
-@app.route("/compare", methods=["GET"])
-def compare_page():
-    return render_template(
-        "index.html",
-        city1=None,
-        city2=None,
-        comparison=None,
-        error=None
-    )
+    return render_template("index.html")
 
 
 @app.route("/compare", methods=["POST"])
 def compare():
-    city1_name = request.form.get("city1", "").strip()
-    city2_name = request.form.get("city2", "").strip()
+    city1 = request.form.get("city1", "").strip()
+    city2 = request.form.get("city2", "").strip()
 
-    if not city1_name or not city2_name:
+    data1, error1 = get_city_data(city1)
+    data2, error2 = get_city_data(city2)
+
+    if error1 or error2:
+        error_message = error1 or error2
         return render_template(
             "index.html",
-            city1=None,
-            city2=None,
-            comparison=None,
-            error="Please enter both city names."
+            error=error_message,
+            city1=city1,
+            city2=city2
         )
-
-    city1, error1 = get_city_data(city1_name)
-    if city1 is None:
-        return render_template(
-            "index.html",
-            city1=None,
-            city2=None,
-            comparison=None,
-            error=f"{city1_name}: {error1}"
-        )
-
-    city2, error2 = get_city_data(city2_name)
-    if city2 is None:
-        return render_template(
-            "index.html",
-            city1=None,
-            city2=None,
-            comparison=None,
-            error=f"{city2_name}: {error2}"
-        )
-
-    comparison = compare_cities(city1, city2)
 
     return render_template(
         "index.html",
+        data1=data1,
+        data2=data2,
         city1=city1,
-        city2=city2,
-        comparison=comparison,
-        error=None
+        city2=city2
     )
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)
+```
