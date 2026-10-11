@@ -4,7 +4,6 @@ import time
 
 app = Flask(__name__)
 
-# Cache weather data for 10 minutes to reduce API requests
 CITY_CACHE = {}
 CACHE_DURATION = 600
 
@@ -55,12 +54,8 @@ def get_city_data(city):
                 "longitude": place["longitude"],
                 "current": (
                     "temperature_2m,relative_humidity_2m,"
-                    "apparent_temperature,is_day,precipitation,"
-                    "weather_code,wind_speed_10m"
-                ),
-                "daily": (
-                    "weather_code,temperature_2m_max,"
-                    "temperature_2m_min"
+                    "wind_speed_10m,apparent_temperature,"
+                    "precipitation,weather_code"
                 ),
                 "timezone": "auto",
                 "forecast_days": 5
@@ -73,15 +68,20 @@ def get_city_data(city):
 
         weather_response.raise_for_status()
         weather_json = weather_response.json()
+        current = weather_json.get("current", {})
 
         data = {
+            "name": place.get("name", city),
             "city": place.get("name", city),
             "country": place.get("country", ""),
-            "latitude": place["latitude"],
-            "longitude": place["longitude"],
-            "current": weather_json.get("current", {}),
-            "daily": weather_json.get("daily", {}),
-            "timezone": weather_json.get("timezone", "")
+            "country_code": place.get("country_code", ""),
+            "latitude": place.get("latitude", 0),
+            "longitude": place.get("longitude", 0),
+            "timezone": weather_json.get("timezone", ""),
+            "temperature": current.get("temperature_2m", 0),
+            "humidity": current.get("relative_humidity_2m", 0),
+            "wind": current.get("wind_speed_10m", 0),
+            "population": None
         }
 
         CITY_CACHE[cache_key] = {
@@ -100,6 +100,29 @@ def get_city_data(city):
         return None, "Weather data could not be processed. Please try again."
 
 
+def make_comparison(city1, city2):
+    comparison = []
+
+    parameters = [
+        ("Temperature", "temperature"),
+        ("Humidity", "humidity"),
+        ("Wind Speed", "wind")
+    ]
+
+    for label, key in parameters:
+        value1 = float(city1.get(key) or 0)
+        value2 = float(city2.get(key) or 0)
+
+        comparison.append({
+            "parameter": label,
+            "city1": value1,
+            "city2": value2,
+            "difference": round(abs(value1 - value2), 2)
+        })
+
+    return comparison
+
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -107,26 +130,34 @@ def home():
 
 @app.route("/compare", methods=["POST"])
 def compare():
-    city1 = request.form.get("city1", "").strip()
-    city2 = request.form.get("city2", "").strip()
+    city_name1 = request.form.get("city1", "").strip()
+    city_name2 = request.form.get("city2", "").strip()
 
-    data1, error1 = get_city_data(city1)
-    data2, error2 = get_city_data(city2)
-
-    if error1 or error2:
+    data1, error1 = get_city_data(city_name1)
+    if error1:
         return render_template(
             "index.html",
-            error=error1 or error2,
-            city1=city1,
-            city2=city2
+            error=error1,
+            city1=city_name1,
+            city2=city_name2
         )
+
+    data2, error2 = get_city_data(city_name2)
+    if error2:
+        return render_template(
+            "index.html",
+            error=error2,
+            city1=city_name1,
+            city2=city_name2
+        )
+
+    comparison = make_comparison(data1, data2)
 
     return render_template(
         "index.html",
-        data1=data1,
-        data2=data2,
-        city1=city1,
-        city2=city2
+        city1=data1,
+        city2=data2,
+        comparison=comparison
     )
 
 
