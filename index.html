@@ -1,1431 +1,656 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>City Comparison Explorer</title>
-
-<style>
-*{
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
-}
-
-:root{
-    --bg:#070b1d;
-    --card:rgba(18,25,55,.72);
-    --card2:rgba(25,34,72,.72);
-    --border:rgba(140,130,255,.22);
-    --purple:#8b5cf6;
-    --blue:#38bdf8;
-    --cyan:#22d3ee;
-    --text:#f5f7ff;
-    --muted:#aab3d0;
-}
-
-body{
-    font-family:Arial,Helvetica,sans-serif;
-    background:
-        radial-gradient(circle at 10% 10%,rgba(139,92,246,.22),transparent 30%),
-        radial-gradient(circle at 90% 20%,rgba(56,189,248,.18),transparent 28%),
-        radial-gradient(circle at 50% 90%,rgba(34,211,238,.12),transparent 30%),
-        var(--bg);
-    color:var(--text);
-    min-height:100vh;
-    overflow-x:hidden;
-}
-
-/* floating background lights */
-
-body::before,
-body::after{
-    content:"";
-    position:fixed;
-    border-radius:50%;
-    pointer-events:none;
-    filter:blur(2px);
-    z-index:-1;
-}
-
-body::before{
-    width:260px;
-    height:260px;
-    background:rgba(139,92,246,.13);
-    top:120px;
-    left:-100px;
-    box-shadow:0 0 100px rgba(139,92,246,.25);
-}
-
-body::after{
-    width:300px;
-    height:300px;
-    background:rgba(34,211,238,.10);
-    right:-120px;
-    bottom:100px;
-    box-shadow:0 0 120px rgba(34,211,238,.20);
-}
-
-/* HERO */
-
-.hero{
-    padding:75px 20px 105px;
-    text-align:center;
-    background:
-        linear-gradient(135deg,
-        rgba(11,15,40,.95),
-        rgba(36,20,75,.82),
-        rgba(7,45,70,.86));
-    border-bottom:1px solid var(--border);
-    position:relative;
-    overflow:hidden;
-}
-
-.hero::before{
-    content:"";
-    position:absolute;
-    width:430px;
-    height:430px;
-    border:1px solid rgba(139,92,246,.18);
-    border-radius:50%;
-    top:-250px;
-    left:-100px;
-    box-shadow:
-        0 0 80px rgba(139,92,246,.14),
-        inset 0 0 50px rgba(139,92,246,.10);
-}
-
-.hero::after{
-    content:"";
-    position:absolute;
-    width:380px;
-    height:380px;
-    border:1px solid rgba(34,211,238,.15);
-    border-radius:50%;
-    right:-100px;
-    bottom:-230px;
-}
-
-.badge{
-    display:inline-block;
-    padding:9px 18px;
-    border:1px solid rgba(139,92,246,.45);
-    background:rgba(139,92,246,.12);
-    color:#d9ccff;
-    border-radius:30px;
-    font-size:12px;
-    letter-spacing:2px;
-    margin-bottom:20px;
-}
-
-.hero h1{
-    font-size:46px;
-    margin-bottom:15px;
-    background:linear-gradient(90deg,#ffffff,#a78bfa,#67e8f9);
-    -webkit-background-clip:text;
-    color:transparent;
-    text-shadow:0 0 35px rgba(139,92,246,.15);
-}
-
-.hero p{
-    color:var(--muted);
-    font-size:17px;
-}
-
-/* MAIN */
-
-.container{
-    width:92%;
-    max-width:1200px;
-    margin:-48px auto 60px;
-    position:relative;
-}
-
-/* GLASS CARD */
-
-.glass{
-    background:linear-gradient(
-        145deg,
-        rgba(30,38,80,.82),
-        rgba(12,17,42,.78)
-    );
-    border:1px solid var(--border);
-    box-shadow:
-        0 25px 60px rgba(0,0,0,.35),
-        inset 0 1px rgba(255,255,255,.05);
-    backdrop-filter:blur(18px);
-    -webkit-backdrop-filter:blur(18px);
-}
-
-/* SEARCH */
-
-.search-card{
-    padding:32px;
-    border-radius:24px;
-    margin-bottom:40px;
-    transform:translateZ(0);
-}
-
-.search-card h2{
-    text-align:center;
-    font-size:25px;
-    margin-bottom:8px;
-}
-
-.subtitle{
-    text-align:center;
-    color:var(--muted);
-    margin-bottom:25px;
-}
-
-.search-box{
-    display:grid;
-    grid-template-columns:1fr 1fr auto;
-    gap:14px;
-}
-
-input{
-    width:100%;
-    padding:16px 18px;
-    border-radius:13px;
-    border:1px solid rgba(139,92,246,.28);
-    background:rgba(5,9,28,.72);
-    color:white;
-    font-size:15px;
-    outline:none;
-}
-
-input::placeholder{
-    color:#7781a4;
-}
-
-input:focus{
-    border-color:var(--cyan);
-    box-shadow:
-        0 0 0 3px rgba(34,211,238,.08),
-        0 0 25px rgba(34,211,238,.10);
-}
-
-button{
-    border:0;
-    padding:15px 25px;
-    border-radius:13px;
-    color:white;
-    font-weight:bold;
-    cursor:pointer;
-    background:linear-gradient(135deg,var(--purple),#6366f1,var(--blue));
-    box-shadow:
-        0 8px 25px rgba(99,102,241,.28),
-        inset 0 1px rgba(255,255,255,.25);
-    transition:.25s;
-}
-
-button:hover{
-    transform:translateY(-3px);
-    box-shadow:
-        0 15px 35px rgba(99,102,241,.38);
-}
-
-.error{
-    margin-top:18px;
-    padding:15px;
-    border-radius:12px;
-    background:rgba(239,68,68,.10);
-    border:1px solid rgba(239,68,68,.28);
-    color:#fca5a5;
-}
-
-/* TITLES */
-
-.section-title{
-    text-align:center;
-    font-size:27px;
-    margin:40px 0 22px;
-    color:white;
-}
-
-.section-title::after{
-    content:"";
-    display:block;
-    width:65px;
-    height:3px;
-    margin:10px auto 0;
-    border-radius:10px;
-    background:linear-gradient(90deg,var(--purple),var(--cyan));
-}
-
-/* CITY CARDS */
-
-.city-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:24px;
-}
-
-.city-card{
-    padding:27px;
-    border-radius:22px;
-    position:relative;
-    overflow:hidden;
-    transition:.3s;
-}
-
-.city-card:hover{
-    transform:translateY(-6px) rotateX(1deg);
-    box-shadow:
-        0 25px 55px rgba(0,0,0,.42),
-        0 0 35px rgba(139,92,246,.10);
-}
-
-.city-card::before{
-    content:"";
-    position:absolute;
-    width:180px;
-    height:180px;
-    border-radius:50%;
-    background:rgba(139,92,246,.12);
-    right:-80px;
-    top:-80px;
-    filter:blur(3px);
-}
-
-.city-card h2{
-    margin-bottom:5px;
-}
-
-.country{
-    color:var(--muted);
-    margin-bottom:22px;
-}
-
-.data-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:13px;
-}
-
-.data-item{
-    padding:17px;
-    border-radius:14px;
-    background:rgba(255,255,255,.035);
-    border:1px solid rgba(255,255,255,.07);
-    transition:.2s;
-}
-
-.data-item:hover{
-    border-color:rgba(34,211,238,.25);
-    transform:translateY(-2px);
-}
-
-.label{
-    display:block;
-    color:#8e99bb;
-    font-size:12px;
-    margin-bottom:5px;
-}
-
-.value{
-    color:#67e8f9;
-    font-size:18px;
-    font-weight:bold;
-}
-
-/* PANEL */
-
-.panel{
-    padding:29px;
-    border-radius:23px;
-    margin-top:25px;
-}
-
-.panel-title{
-    text-align:center;
-    margin-bottom:22px;
-    font-size:24px;
-}
-
-/* TABLE */
-
-.table-wrap{
-    overflow-x:auto;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-    min-width:650px;
-}
-
-th{
-    padding:15px;
-    color:white;
-    background:linear-gradient(
-        90deg,
-        rgba(139,92,246,.35),
-        rgba(56,189,248,.22)
-    );
-}
-
-td{
-    padding:14px;
-    text-align:center;
-    border-bottom:1px solid rgba(255,255,255,.07);
-    color:#dce2f5;
-}
-
-tr:hover{
-    background:rgba(139,92,246,.07);
-}
-
-td strong{
-    color:#67e8f9;
-}
-
-/* CHARTS */
-
-.charts-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:23px;
-}
-
-.chart-card{
-    padding:23px;
-    border-radius:20px;
-    background:linear-gradient(
-        145deg,
-        rgba(29,37,78,.74),
-        rgba(12,17,41,.75)
-    );
-    border:1px solid var(--border);
-    box-shadow:
-        0 20px 45px rgba(0,0,0,.25),
-        inset 0 1px rgba(255,255,255,.04);
-}
-
-.chart-card h3{
-    text-align:center;
-    margin-bottom:18px;
-}
-
-.chart-area{
-    height:245px;
-    display:flex;
-    align-items:flex-end;
-    justify-content:center;
-}
-
-.bars{
-    display:flex;
-    align-items:flex-end;
-    gap:35px;
-    height:195px;
-}
-
-.bar-wrap{
-    text-align:center;
-}
-
-.bar{
-    width:65px;
-    min-height:6px;
-    border-radius:10px 10px 3px 3px;
-    background:linear-gradient(
-        180deg,
-        #a78bfa,
-        #6366f1,
-        #4338ca
-    );
-    position:relative;
-    box-shadow:
-        0 0 25px rgba(139,92,246,.25),
-        inset 1px 0 rgba(255,255,255,.2);
-}
-
-.bar.two{
-    background:linear-gradient(
-        180deg,
-        #67e8f9,
-        #06b6d4,
-        #0e7490
-    );
-    box-shadow:
-        0 0 25px rgba(34,211,238,.22);
-}
-
-.bar-value{
-    position:absolute;
-    bottom:100%;
-    left:50%;
-    transform:translateX(-50%);
-    white-space:nowrap;
-    font-size:12px;
-    color:white;
-    font-weight:bold;
-    margin-bottom:7px;
-}
-
-.bar-name{
-    margin-top:10px;
-    color:#9da7c6;
-    font-size:12px;
-    max-width:100px;
-}
-
-/* INSIGHTS */
-
-.insight{
-    display:flex;
-    gap:12px;
-    padding:17px;
-    margin:12px 0;
-    border-radius:13px;
-    background:rgba(34,211,238,.045);
-    border:1px solid rgba(34,211,238,.10);
-    color:#d8def0;
-}
-
-.insight strong{
-    color:#67e8f9;
-}
-
-.result-box{
-    text-align:center;
-    padding:27px;
-    border-radius:17px;
-    background:
-        radial-gradient(circle at center,
-        rgba(139,92,246,.15),
-        transparent 60%);
-    border:1px solid rgba(139,92,246,.18);
-}
-
-.result-box h3{
-    color:#c4b5fd;
-    margin-bottom:10px;
-}
-
-/* LOCATION */
-
-.location-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:20px;
-}
-
-.location-card{
-    padding:23px;
-    text-align:center;
-    border-radius:16px;
-    background:rgba(255,255,255,.035);
-    border:1px solid rgba(255,255,255,.07);
-}
-
-.location-card h3{
-    color:#67e8f9;
-    margin-bottom:12px;
-}
-
-.location-card p{
-    color:#aab3d0;
-    margin:5px;
-}
-
-.location-card strong{
-    color:#e4e8f5;
-}
-
-/* FEATURES */
-
-.features{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:18px;
-    margin-top:38px;
-}
-
-.feature{
-    padding:23px;
-    text-align:center;
-    border-radius:18px;
-    background:rgba(17,24,52,.68);
-    border:1px solid var(--border);
-    transition:.25s;
-}
-
-.feature:hover{
-    transform:translateY(-5px);
-    box-shadow:0 15px 35px rgba(0,0,0,.28);
-}
-
-.feature-icon{
-    font-size:29px;
-    margin-bottom:9px;
-}
-
-.feature h3{
-    margin-bottom:7px;
-}
-
-.feature p{
-    color:#929dbb;
-    font-size:13px;
-}
-
-.reset{
-    text-align:center;
-}
-
-.reset a{
-    text-decoration:none;
-}
-
-.source{
-    text-align:center;
-    color:#7782a3;
-    font-size:12px;
-    margin-top:25px;
-}
-
-/* FOOTER */
-
-footer{
-    margin-top:60px;
-    padding:30px;
-    text-align:center;
-    background:#050816;
-    border-top:1px solid rgba(139,92,246,.18);
-    color:#8994b4;
-}
-
-footer strong{
-    color:#a78bfa;
-}
-
-/* MOBILE */
-
-@media(max-width:850px){
-
-    .search-box,
-    .city-grid,
-    .charts-grid,
-    .location-grid{
-        grid-template-columns:1fr;
-    }
-
-    .features{
-        grid-template-columns:1fr 1fr;
-    }
-
-    .hero h1{
-        font-size:36px;
-    }
-}
-
-@media(max-width:600px){
-
-    .search-box,
-    .data-grid,
-    .features{
-        grid-template-columns:1fr;
-    }
-
-    .hero{
-        padding:55px 15px 85px;
-    }
-
-    .hero h1{
-        font-size:29px;
-    }
-
-    .container{
-        width:94%;
-    }
-
-    .search-card,
-    .panel{
-        padding:20px;
-    }
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City Comparison Explorer</title>
+
+    <style>
+        :root {
+            --bg: #0b1020;
+            --panel: #151d32;
+            --panel2: #1d2942;
+            --text: #f4f7ff;
+            --muted: #aab7d0;
+            --accent: #8b7cff;
+            --cyan: #52d9ed;
+            --border: #303d59;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0b1020, #111a30);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            width: min(1150px, 92%);
+            margin: auto;
+            padding: 35px 0 50px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .tag {
+            display: inline-block;
+            color: var(--cyan);
+            background: #173044;
+            padding: 8px 14px;
+            border-radius: 30px;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+
+        h1 {
+            font-size: clamp(30px, 5vw, 48px);
+            margin: 17px 0 10px;
+        }
+
+        h1 span {
+            color: var(--accent);
+        }
+
+        .subtitle {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 12px 35px #00000018;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 21px;
+        }
+
+        .search-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        label {
+            display: block;
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #0e1628;
+            color: white;
+            font-size: 16px;
+        }
+
+        input:focus {
+            outline: 2px solid var(--accent);
+        }
+
+        button {
+            margin-top: 18px;
+            padding: 14px 22px;
+            background: linear-gradient(90deg, #7567ff, #4d8dff);
+            color: white;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        button:hover {
+            opacity: .9;
+        }
+
+        .error {
+            background: #48232f;
+            border: 1px solid #a94c66;
+            padding: 14px;
+            border-radius: 10px;
+            color: #ffd7e0;
+            margin-bottom: 20px;
+        }
+
+        .city-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .city-card {
+            background: linear-gradient(145deg, #202e4b, #151d32);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 23px;
+        }
+
+        .city-name {
+            font-size: 25px;
+            margin: 0 0 5px;
+        }
+
+        .country {
+            color: var(--muted);
+            margin-bottom: 20px;
+        }
+
+        .main-temp {
+            font-size: 43px;
+            font-weight: bold;
+            color: var(--cyan);
+            margin: 12px 0;
+        }
+
+        .condition {
+            color: var(--muted);
+            margin-bottom: 22px;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .metric {
+            background: #0e1628;
+            padding: 14px;
+            border-radius: 12px;
+            min-width: 0;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 9px;
+        }
+
+        .metric-value {
+            font-size: 19px;
+            font-weight: bold;
+            overflow-wrap: anywhere;
+        }
+
+        .section-title {
+            margin-bottom: 18px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 500px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 15px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            color: var(--cyan);
+            font-size: 13px;
+        }
+
+        td {
+            font-size: 14px;
+        }
+
+        .chart-row {
+            margin: 23px 0;
+        }
+
+        .chart-heading {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .chart-heading span:last-child {
+            color: var(--muted);
+        }
+
+        .bar-line {
+            display: flex;
+            height: 13px;
+            gap: 4px;
+            margin-bottom: 9px;
+        }
+
+        .bar {
+            height: 13px;
+            min-width: 0;
+            border-radius: 8px;
+            transition: width .3s;
+        }
+
+        .bar-one {
+            background: var(--accent);
+        }
+
+        .bar-two {
+            background: var(--cyan);
+        }
+
+        .legend {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 15px;
+        }
+
+        .dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .insight-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .insight {
+            background: #0e1628;
+            border: 1px solid var(--border);
+            padding: 18px;
+            border-radius: 12px;
+        }
+
+        .insight h3 {
+            font-size: 15px;
+            margin: 0 0 9px;
+        }
+
+        .insight p {
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .note {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+            margin-top: 18px;
+        }
+
+        .empty {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--muted);
+            font-size: 12px;
+            padding: 12px;
+        }
+
+        @media (max-width: 650px) {
+            .container {
+                width: 94%;
+                padding-top: 22px;
+            }
+
+            .panel {
+                padding: 17px;
+            }
+
+            .search-grid,
+            .city-grid,
+            .insight-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .main-temp {
+                font-size: 37px;
+            }
+        }
+    </style>
 </head>
 
 <body>
-
-<section class="hero">
-
-    <div class="badge">
-        DATA SCIENCE PROJECT
-    </div>
-
-    <h1>🌆 City Comparison Explorer</h1>
-
-    <p>
-        Explore cities • Compare data • Discover insights
-    </p>
-
-</section>
-
-
 <div class="container">
 
-
-<!-- SEARCH -->
-
-<div class="glass search-card">
-
-    <h2>🔎 Compare Two Cities</h2>
-
-    <p class="subtitle">
-        Enter any two cities to explore their data side-by-side.
-    </p>
-
-    <form action="/compare" method="POST">
-
-        <div class="search-box">
-
-            <input
-                type="text"
-                name="city1"
-                placeholder="First city — Mumbai"
-                required
-            >
-
-            <input
-                type="text"
-                name="city2"
-                placeholder="Second city — Pune"
-                required
-            >
-
-            <button type="submit">
-                Compare →
-            </button>
-
-        </div>
-
-    </form>
-
+    <header>
+        <div class="tag">LIVE WEATHER & CITY DATA</div>
+        <h1>City <span>Comparison Explorer</span></h1>
+        <p class="subtitle">
+            Compare weather conditions, population and key statistics
+            between two cities.
+        </p>
+    </header>
 
     {% if error %}
-
-    <div class="error">
-        ❌ {{ error }}
+    <div class="error" role="alert">
+        {{ error }}
     </div>
-
     {% endif %}
 
-</div>
+    <section class="panel">
+        <h2>🔎 Compare Two Cities</h2>
+        <p class="subtitle">
+            Enter two city names to explore their latest available data.
+        </p>
 
+        <form action="{{ url_for('compare') }}" method="POST">
+            <div class="search-grid">
+                <div>
+                    <label for="city1">First City</label>
+                    <input
+                        id="city1"
+                        type="text"
+                        name="city1"
+                        placeholder="e.g. Nagpur"
+                        value="{{ city_input1 if city_input1 is defined else (city1.name if city1 is defined else '') }}"
+                        required
+                    >
+                </div>
 
+                <div>
+                    <label for="city2">Second City</label>
+                    <input
+                        id="city2"
+                        type="text"
+                        name="city2"
+                        placeholder="e.g. Pune"
+                        value="{{ city_input2 if city_input2 is defined else (city2.name if city2 is defined else '') }}"
+                        required
+                    >
+                </div>
+            </div>
 
-{% if city1 and city2 %}
+            <button type="submit">Compare Cities →</button>
+        </form>
+    </section>
 
+    {% if city1 is defined and city2 is defined %}
 
-<!-- OVERVIEW -->
+    <section class="panel">
+        <h2 class="section-title">🌍 City Overview</h2>
 
-<h2 class="section-title">
-    🏙️ City Overview
-</h2>
+        <div class="city-grid">
+            {% for city in [city1, city2] %}
+            <article class="city-card">
+                <h3 class="city-name">{{ city.name }}</h3>
 
+                <div class="country">
+                    {{ city.country or "Country unavailable" }}
+                </div>
 
-<div class="city-grid">
+                <div class="main-temp">
+                    {% if city.temperature is not none %}
+                        {{ "%.1f"|format(city.temperature|float) }}°C
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
 
+                <div class="condition">
+                    {{ city.weather_description or "Weather unavailable" }}
+                </div>
 
-{% for city in [city1, city2] %}
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-label">👥 Population</div>
+                        <div class="metric-value">
+                            {% if city.population is not none %}
+                                {{ "{:,.0f}".format(city.population|float) }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                    </div>
 
-<div class="glass city-card">
+                    <div class="metric">
+                        <div class="metric-label">💧 Humidity</div>
+                        <div class="metric-value">
+                            {% if city.humidity is not none %}
+                                {{ city.humidity }}%
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                    </div>
 
-    <h2>
-        📍 {{ city.name }}
-    </h2>
+                    <div class="metric">
+                        <div class="metric-label">💨 Wind Speed</div>
+                        <div class="metric-value">
+                            {% if city.wind is not none %}
+                                {{ city.wind }} km/h
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                    </div>
 
-    <div class="country">
+                    <div class="metric">
+                        <div class="metric-label">🤒 Feels Like</div>
+                        <div class="metric-value">
+                            {% if city.feels_like is not none %}
+                                {{ "%.1f"|format(city.feels_like|float) }}°C
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                    </div>
 
-        {{ city.country }}
+                    <div class="metric">
+                        <div class="metric-label">🌧️ Precipitation</div>
+                        <div class="metric-value">
+                            {% if city.precipitation is not none %}
+                                {{ city.precipitation }} mm
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                    </div>
 
-        {% if city.country_code %}
-        · {{ city.country_code }}
+                    <div class="metric">
+                        <div class="metric-label">📍 Coordinates</div>
+                        <div class="metric-value" style="font-size:13px">
+                            {% if city.latitude is not none and city.longitude is not none %}
+                                {{ "%.2f"|format(city.latitude|float) }},
+                                {{ "%.2f"|format(city.longitude|float) }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <p class="note">
+                    Time zone: {{ city.timezone or "Unavailable" }}
+                </p>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2 class="section-title">📋 Comparison Table</h2>
+
+        {% if comparison %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>{{ city1.name }}</th>
+                        <th>{{ city2.name }}</th>
+                        <th>Difference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in comparison %}
+                    <tr>
+                        <td>{{ row.parameter }}</td>
+                        <td>
+                            {% if row.parameter == "Population" %}
+                                {{ "{:,.0f}".format(row.city1|float) }}
+                            {% else %}
+                                {{ row.city1 }} {{ row.unit }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.parameter == "Population" %}
+                                {{ "{:,.0f}".format(row.city2|float) }}
+                            {% else %}
+                                {{ row.city2 }} {{ row.unit }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.parameter == "Population" %}
+                                {{ "{:,.0f}".format(row.difference|float) }}
+                            {% else %}
+                                {{ row.difference }} {{ row.unit }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty">
+            Comparison data is not available for these cities.
+        </p>
         {% endif %}
 
-    </div>
+        <p class="note">
+            Population is shown only when the selected data source provides
+            a value. Population values may not be available for every city.
+        </p>
+    </section>
 
+    <section class="panel">
+        <h2 class="section-title">📊 Visual Comparison</h2>
 
-    <div class="data-grid">
+        {% set chart_items = [
+            ("Temperature", "temperature", "°C"),
+            ("Humidity", "humidity", "%"),
+            ("Wind Speed", "wind", "km/h"),
+            ("Population", "population", "people")
+        ] %}
 
+        {% for label, key, unit in chart_items %}
+            {% set a = city1[key] %}
+            {% set b = city2[key] %}
 
-        <div class="data-item">
+            {% if a is not none and b is not none %}
+                {% set av = a|float %}
+                {% set bv = b|float %}
+                {% set maxv = [av, bv, 0.000001]|max %}
+                {% set wa = (av / maxv * 100)|round(1) %}
+                {% set wb = (bv / maxv * 100)|round(1) %}
 
-            <span class="label">
-                🌡️ Temperature
-            </span>
+                <div class="chart-row">
+                    <div class="chart-heading">
+                        <strong>{{ label }}</strong>
+                        <span>
+                            {% if key == "population" %}
+                                {{ "{:,.0f}".format(av) }} vs
+                                {{ "{:,.0f}".format(bv) }}
+                            {% else %}
+                                {{ av }} {{ unit }} vs {{ bv }} {{ unit }}
+                            {% endif %}
+                        </span>
+                    </div>
 
-            <span class="value">
-                {{ city.temperature }} °C
-            </span>
+                    <div class="bar-line" aria-label="{{ label }} comparison">
+                        <div class="bar bar-one" style="width:{{ wa }}%"></div>
+                    </div>
 
-        </div>
-
-
-        <div class="data-item">
-
-            <span class="label">
-                💧 Humidity
-            </span>
-
-            <span class="value">
-                {{ city.humidity }} %
-            </span>
-
-        </div>
-
-
-        <div class="data-item">
-
-            <span class="label">
-                💨 Wind Speed
-            </span>
-
-            <span class="value">
-                {{ city.wind }} km/h
-            </span>
-
-        </div>
-
-
-        <div class="data-item">
-
-            <span class="label">
-                👥 Population
-            </span>
-
-            <span class="value">
-
-            {% if city.population %}
-                {{ "{:,}".format(city.population|int) }}
+                    <div class="bar-line">
+                        <div class="bar bar-two" style="width:{{ wb }}%"></div>
+                    </div>
+                </div>
             {% else %}
-                N/A
+                <div class="chart-row">
+                    <strong>{{ label }}</strong>
+                    <p class="empty">
+                        Chart unavailable because data is missing for one
+                        or both cities.
+                    </p>
+                </div>
             {% endif %}
-
-            </span>
-
-        </div>
-
-
-        <div class="data-item">
-
-            <span class="label">
-                🌍 Latitude
-            </span>
-
-            <span class="value">
-                {{ city.latitude }}
-            </span>
-
-        </div>
-
-
-        <div class="data-item">
-
-            <span class="label">
-                📍 Longitude
-            </span>
-
-            <span class="value">
-                {{ city.longitude }}
-            </span>
-
-        </div>
-
-
-        <div class="data-item">
-
-            <span class="label">
-                🕐 Timezone
-            </span>
-
-            <span class="value">
-                {{ city.timezone }}
-            </span>
-
-        </div>
-
-
-    </div>
-
-</div>
-
-{% endfor %}
-
-</div>
-
-
-
-<!-- COMPARISON -->
-
-<div class="glass panel">
-
-    <h2 class="panel-title">
-        ⚖️ Side-by-Side Comparison
-    </h2>
-
-    <div class="table-wrap">
-
-    <table>
-
-        <tr>
-
-            <th>Parameter</th>
-
-            <th>{{ city1.name }}</th>
-
-            <th>{{ city2.name }}</th>
-
-            <th>Difference</th>
-
-        </tr>
-
-
-        {% for item in comparison %}
-
-        <tr>
-
-            <td>
-
-            {% if item.parameter == "Temperature" %}
-                🌡️ Temperature
-            {% elif item.parameter == "Humidity" %}
-                💧 Humidity
-            {% elif item.parameter == "Wind Speed" %}
-                💨 Wind Speed
-            {% elif item.parameter == "Population" %}
-                👥 Population
-            {% endif %}
-
-            </td>
-
-
-            <td>
-
-            {% if item.parameter == "Population" %}
-                {{ "{:,}".format(item.city1|int) }}
-            {% else %}
-                {{ item.city1 }}
-            {% endif %}
-
-            </td>
-
-
-            <td>
-
-            {% if item.parameter == "Population" %}
-                {{ "{:,}".format(item.city2|int) }}
-            {% else %}
-                {{ item.city2 }}
-            {% endif %}
-
-            </td>
-
-
-            <td>
-
-                <strong>
-
-                {% if item.parameter == "Population" %}
-                    {{ "{:,}".format(item.difference|int) }}
-                {% else %}
-                    {{ item.difference }}
-                {% endif %}
-
-                </strong>
-
-            </td>
-
-        </tr>
-
         {% endfor %}
 
-    </table>
-
-    </div>
-
-</div>
-
-
-
-<!-- CHARTS -->
-
-<h2 class="section-title">
-    📊 Visual Data Comparison
-</h2>
-
-
-<div class="charts-grid">
-
-
-{% for title, icon, key, maxvalue, unit in [
-
-("Temperature","🌡️","temperature",50,"°C"),
-
-("Humidity","💧","humidity",100,"%"),
-
-("Wind Speed","💨","wind",50," km/h")
-
-] %}
-
-
-<div class="chart-card">
-
-    <h3>
-        {{ icon }} {{ title }}
-    </h3>
-
-
-    <div class="chart-area">
-
-        <div class="bars">
-
-
-            <div class="bar-wrap">
-
-                <div
-                    class="bar"
-                    style="height:{{ ([city1[key]|float / maxvalue * 190,5]|max)|round }}px"
-                >
-
-                    <span class="bar-value">
-                        {{ city1[key] }}{{ unit }}
-                    </span>
-
-                </div>
-
-                <div class="bar-name">
-                    {{ city1.name }}
-                </div>
-
-            </div>
-
-
-            <div class="bar-wrap">
-
-                <div
-                    class="bar two"
-                    style="height:{{ ([city2[key]|float / maxvalue * 190,5]|max)|round }}px"
-                >
-
-                    <span class="bar-value">
-                        {{ city2[key] }}{{ unit }}
-                    </span>
-
-                </div>
-
-                <div class="bar-name">
-                    {{ city2.name }}
-                </div>
-
-            </div>
-
-
+        <div class="legend">
+            <span><i class="dot bar-one"></i>{{ city1.name }}</span>
+            <span><i class="dot bar-two"></i>{{ city2.name }}</span>
         </div>
+    </section>
 
-    </div>
+    <section class="panel">
+        <h2 class="section-title">💡 Automatic Insights</h2>
 
-</div>
-
-{% endfor %}
-
-
-
-<!-- POPULATION -->
-
-<div class="chart-card">
-
-    <h3>
-        👥 Population
-    </h3>
-
-    <div class="chart-area">
-
-    {% if city1.population and city2.population %}
-
-        {% set max_pop = [city1.population|float,city2.population|float]|max %}
-
-        <div class="bars">
-
-
-            <div class="bar-wrap">
-
-                <div
-                    class="bar"
-                    style="height:{{ ([city1.population|float / max_pop * 190,5]|max)|round }}px"
-                >
-
-                    <span class="bar-value">
-
-                        {{ "{:,}".format(city1.population|int) }}
-
-                    </span>
-
-                </div>
-
-                <div class="bar-name">
-                    {{ city1.name }}
-                </div>
-
-            </div>
-
-
-            <div class="bar-wrap">
-
-                <div
-                    class="bar two"
-                    style="height:{{ ([city2.population|float / max_pop * 190,5]|max)|round }}px"
-                >
-
-                    <span class="bar-value">
-
-                        {{ "{:,}".format(city2.population|int) }}
-
-                    </span>
-
-                </div>
-
-                <div class="bar-name">
-                    {{ city2.name }}
-                </div>
-
-            </div>
-
-
+        {% if insights %}
+        <div class="insight-grid">
+            {% for item in insights %}
+            <article class="insight">
+                <h3>{{ item.icon }} {{ item.title }}</h3>
+                <p>{{ item.text }}</p>
+            </article>
+            {% endfor %}
         </div>
+        {% else %}
+        <p class="empty">
+            Insights will appear when enough comparison data is available.
+        </p>
+        {% endif %}
+    </section>
 
     {% else %}
 
-        <p style="color:#9da7c6">
-            Population data not available.
+    <section class="panel">
+        <h2>✨ Explore City Statistics</h2>
+        <p class="empty">
+            Compare two cities to view temperature, humidity, wind speed,
+            feels-like temperature, precipitation, population when available,
+            comparison charts and automatic insights.
         </p>
+    </section>
 
     {% endif %}
 
-    </div>
+    <footer>
+        City Comparison Explorer · Weather data by Open-Meteo
+    </footer>
 
 </div>
-
-
-</div>
-
-
-
-<!-- INSIGHTS -->
-
-<div class="glass panel">
-
-    <h2 class="panel-title">
-        💡 Automatic Data Insights
-    </h2>
-
-
-    <div class="insight">
-
-        <span>🌡️</span>
-
-        <div>
-
-        <strong>Temperature:</strong>
-
-        {% if city1.temperature|float > city2.temperature|float %}
-
-            {{ city1.name }} has a higher temperature than {{ city2.name }}.
-
-        {% elif city2.temperature|float > city1.temperature|float %}
-
-            {{ city2.name }} has a higher temperature than {{ city1.name }}.
-
-        {% else %}
-
-            Both cities have the same temperature.
-
-        {% endif %}
-
-        </div>
-
-    </div>
-
-
-    <div class="insight">
-
-        <span>💧</span>
-
-        <div>
-
-        <strong>Humidity:</strong>
-
-        {% if city1.humidity|float > city2.humidity|float %}
-
-            {{ city1.name }} has higher humidity.
-
-        {% elif city2.humidity|float > city1.humidity|float %}
-
-            {{ city2.name }} has higher humidity.
-
-        {% else %}
-
-            Both cities have the same humidity.
-
-        {% endif %}
-
-        </div>
-
-    </div>
-
-
-    <div class="insight">
-
-        <span>💨</span>
-
-        <div>
-
-        <strong>Wind:</strong>
-
-        {% if city1.wind|float > city2.wind|float %}
-
-            {{ city1.name }} has higher wind speed.
-
-        {% elif city2.wind|float > city1.wind|float %}
-
-            {{ city2.name }} has higher wind speed.
-
-        {% else %}
-
-            Both cities have the same wind speed.
-
-        {% endif %}
-
-        </div>
-
-    </div>
-
-
-    <div class="insight">
-
-        <span>👥</span>
-
-        <div>
-
-        <strong>Population:</strong>
-
-        {% if city1.population and city2.population %}
-
-            {% if city1.population|float > city2.population|float %}
-
-                {{ city1.name }} has a larger population.
-
-            {% elif city2.population|float > city1.population|float %}
-
-                {{ city2.name }} has a larger population.
-
-            {% else %}
-
-                Both cities have the same population.
-
-            {% endif %}
-
-        {% else %}
-
-            Population comparison is not available.
-
-        {% endif %}
-
-        </div>
-
-    </div>
-
-</div>
-
-
-
-<!-- SUMMARY -->
-
-<div class="glass panel">
-
-    <h2 class="panel-title">
-        🏆 Overall Data Summary
-    </h2>
-
-    <div class="result-box">
-
-        <h3>
-            Data Science Based Comparison
-        </h3>
-
-        <p style="color:#aab3d0">
-
-            The system collects city information,
-            compares numerical parameters,
-            calculates differences,
-            visualizes results and generates
-            automatic data-based insights.
-
-        </p>
-
-    </div>
-
-</div>
-
-
-
-<!-- LOCATION -->
-
-<div class="glass panel">
-
-    <h2 class="panel-title">
-        🌍 Geographic Information
-    </h2>
-
-
-    <div class="location-grid">
-
-
-    {% for city in [city1,city2] %}
-
-        <div class="location-card">
-
-            <h3>
-                📍 {{ city.name }}
-            </h3>
-
-            <p>
-                <strong>Country:</strong>
-                {{ city.country }}
-            </p>
-
-            <p>
-                <strong>Latitude:</strong>
-                {{ city.latitude }}
-            </p>
-
-            <p>
-                <strong>Longitude:</strong>
-                {{ city.longitude }}
-            </p>
-
-            <p>
-                <strong>Timezone:</strong>
-                {{ city.timezone }}
-            </p>
-
-        </div>
-
-    {% endfor %}
-
-    </div>
-
-</div>
-
-
-
-<!-- RESET -->
-
-<div class="glass panel" style="text-align:center">
-
-    <h2 class="panel-title">
-        🔄 Compare Another City
-    </h2>
-
-    <a href="/compare">
-
-        <button>
-            Start New Comparison
-        </button>
-
-    </a>
-
-</div>
-
-
-<p class="source">
-    Data powered by Open-Meteo services.
-</p>
-
-
-{% endif %}
-
-
-
-<!-- FEATURES -->
-
-<div class="features">
-
-    <div class="feature">
-
-        <div class="feature-icon">🔎</div>
-
-        <h3>City Search</h3>
-
-        <p>
-            Search cities from different locations.
-        </p>
-
-    </div>
-
-
-    <div class="feature">
-
-        <div class="feature-icon">⚖️</div>
-
-        <h3>Comparison</h3>
-
-        <p>
-            Compare city parameters side-by-side.
-        </p>
-
-    </div>
-
-
-    <div class="feature">
-
-        <div class="feature-icon">📊</div>
-
-        <h3>Visualization</h3>
-
-        <p>
-            Understand data using visual charts.
-        </p>
-
-    </div>
-
-
-    <div class="feature">
-
-        <div class="feature-icon">💡</div>
-
-        <h3>Insights</h3>
-
-        <p>
-            Generate automatic observations.
-        </p>
-
-    </div>
-
-</div>
-
-
-</div>
-
-
-<footer>
-
-    <p>
-        🌆 <strong>City Comparison Explorer</strong>
-    </p>
-
-    <p>
-        Data Science Based Automated City Analysis System
-    </p>
-
-</footer>
-
-
 </body>
 </html>
