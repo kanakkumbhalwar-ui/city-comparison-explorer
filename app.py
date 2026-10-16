@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request
 import requests
 import time
@@ -10,6 +11,27 @@ CACHE_DURATION = 600
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 
+WEATHER_CODES = {
+    0: "Clear sky",
+    1: "Mainly clear",
+    2: "Partly cloudy",
+    3: "Overcast",
+    45: "Fog",
+    48: "Rime fog",
+    51: "Light drizzle",
+    53: "Drizzle",
+    55: "Dense drizzle",
+    61: "Light rain",
+    63: "Moderate rain",
+    65: "Heavy rain",
+    80: "Rain showers",
+    81: "Moderate rain showers",
+    82: "Heavy rain showers",
+    95: "Thunderstorm",
+    96: "Thunderstorm with hail",
+    99: "Thunderstorm with heavy hail"
+}
+
 
 def get_city_data(city):
     city = (city or "").strip()
@@ -17,15 +39,15 @@ def get_city_data(city):
     if not city:
         return None, "Please enter a city name."
 
-    cache_key = city.lower()
+    key = city.casefold()
     now = time.time()
 
-    cached = CITY_CACHE.get(cache_key)
+    cached = CITY_CACHE.get(key)
     if cached and now - cached["time"] < CACHE_DURATION:
         return cached["data"], None
 
     try:
-        geo_response = requests.get(
+        geo = requests.get(
             GEOCODING_URL,
             params={
                 "name": city,
@@ -33,21 +55,21 @@ def get_city_data(city):
                 "language": "en",
                 "format": "json"
             },
-            timeout=15
+            timeout=12
         )
 
-        if geo_response.status_code == 429:
-            return None, "Weather service is busy. Please wait a minute and try again."
+        if geo.status_code == 429:
+            return None, "Service is busy. Please try again later."
 
-        geo_response.raise_for_status()
-        results = geo_response.json().get("results", [])
+        geo.raise_for_status()
+        results = geo.json().get("results") or []
 
         if not results:
-            return None, f"Could not find city: {city}"
+            return None, f"City not found: {city}"
 
         place = results[0]
 
-        weather_response = requests.get(
+        weather = requests.get(
             WEATHER_URL,
             params={
                 "latitude": place["latitude"],
@@ -60,31 +82,44 @@ def get_city_data(city):
                 "timezone": "auto",
                 "forecast_days": 5
             },
-            timeout=20
+            timeout=15
         )
 
-        if weather_response.status_code == 429:
-            return None, "Weather service is busy. Please wait a minute and try again."
+        if weather.status_code == 429:
+            return None, "Service is busy. Please try again later."
 
-        weather_response.raise_for_status()
-        weather_json = weather_response.json()
-        current = weather_json.get("current", {})
+        weather.raise_for_status()
+        weather_data = weather.json()
+        current = weather_data.get("current") or {}
+
+        population = place.get("population")
+        try:
+            population = float(population) if population is not None else None
+        except (TypeError, ValueError):
+            population = None
+
+        code = current.get("weather_code")
 
         data = {
             "name": place.get("name", city),
             "city": place.get("name", city),
             "country": place.get("country", ""),
             "country_code": place.get("country_code", ""),
-            "latitude": place.get("latitude", 0),
-            "longitude": place.get("longitude", 0),
-            "timezone": weather_json.get("timezone", ""),
-            "temperature": current.get("temperature_2m", 0),
-            "humidity": current.get("relative_humidity_2m", 0),
-            "wind": current.get("wind_speed_10m", 0),
-            "population": None
+            "latitude": place.get("latitude"),
+            "longitude": place.get("longitude"),
+            "timezone": weather_data.get("timezone", "Unknown"),
+            "temperature": current.get("temperature_2m"),
+            "feels_like": current.get("apparent_temperature"),
+            "humidity": current.get("relative_humidity_2m"),
+            "wind": current.get("wind_speed_10m"),
+            "precipitation": current.get("precipitation"),
+            "weather_description": WEATHER_CODES.get(
+                code, "Weather information unavailable"
+            ),
+            "population": population
         }
 
-        CITY_CACHE[cache_key] = {
+        CITY_CACHE[key] = {
             "time": now,
             "data": data
         }
@@ -92,35 +127,87 @@ def get_city_data(city):
         return data, None
 
     except requests.RequestException as error:
-        app.logger.error("API REQUEST ERROR: %s", error)
-        return None, "Weather service is temporarily unavailable. Please try again shortly."
+        app.logger.warning("API request failed: %s", error)
+        return None, "Weather service unavailable. Please try again."
 
     except (ValueError, KeyError, TypeError) as error:
-        app.logger.error("DATA PROCESSING ERROR: %s", error)
-        return None, "Weather data could not be processed. Please try again."
+        app.logger.warning("Data processing failed: %s", error)
+        return None, "Could not process the data. Please try again."
+
+
+def number(value):
+    try:
+        return float(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 def make_comparison(city1, city2):
-    comparison = []
+    rows = []
 
     parameters = [
-        ("Temperature", "temperature"),
-        ("Humidity", "humidity"),
-        ("Wind Speed", "wind")
+        ("Temperature", "temperature", "°C"),
+        ("Humidity", "humidity", "%"),
+        ("Wind Speed", "wind", "km/h"),
+        ("Feels Like", "feels_like", "°C"),
+        ("Precipitation", "precipitation", "mm"),
+        ("Population", "population", "people")
     ]
 
-    for label, key in parameters:
-        value1 = float(city1.get(key) or 0)
-        value2 = float(city2.get(key) or 0)
+    for label, key, unit in parameters:
+        a = number(city1.get(key))
+        b = number(city2.get(key))
 
-        comparison.append({
-            "parameter": label,
-            "city1": value1,
-            "city2": value2,
-            "difference": round(abs(value1 - value2), 2)
+        if a is not None and b is not None:
+            rows.append({
+                "parameter": label,
+                "city1": round(a, 1),
+                "city2": round(b, 1),
+                "difference": round(abs(a - b), 1),
+                "unit": unit
+            })
+
+    return rows
+
+
+def make_insights(city1, city2):
+    insights = []
+
+    parameters = [
+        ("🌡️", "Temperature", "temperature", "°C"),
+        ("💧", "Humidity", "humidity", "%"),
+        ("💨", "Wind Speed", "wind", "km/h"),
+        ("🌧️", "Precipitation", "precipitation", "mm"),
+        ("👥", "Population", "population", "people")
+    ]
+
+    for icon, label, key, unit in parameters:
+        a = number(city1.get(key))
+        b = number(city2.get(key))
+
+        if a is None or b is None:
+            continue
+
+        if abs(a - b) < 0.05:
+            message = f"{label} is almost the same in both cities."
+        elif a > b:
+            message = (
+                f"{city1['name']} has a higher {label.lower()} "
+                f"than {city2['name']} by {abs(a-b):,.1f} {unit}."
+            )
+        else:
+            message = (
+                f"{city2['name']} has a higher {label.lower()} "
+                f"than {city1['name']} by {abs(a-b):,.1f} {unit}."
+            )
+
+        insights.append({
+            "icon": icon,
+            "title": label,
+            "text": message
         })
 
-    return comparison
+    return insights
 
 
 @app.route("/")
@@ -128,36 +215,54 @@ def home():
     return render_template("index.html")
 
 
-@app.route("/compare", methods=["POST"])
+@app.route("/compare", methods=["GET", "POST"])
 def compare():
-    city_name1 = request.form.get("city1", "").strip()
-    city_name2 = request.form.get("city2", "").strip()
+    if request.method == "GET":
+        return render_template("index.html")
 
-    data1, error1 = get_city_data(city_name1)
-    if error1:
+    name1 = request.form.get("city1", "").strip()
+    name2 = request.form.get("city2", "").strip()
+
+    if not name1 or not name2:
         return render_template(
             "index.html",
-            error=error1,
-            city1=city_name1,
-            city2=city_name2
+            error="Please enter both city names.",
+            city_input1=name1,
+            city_input2=name2
         )
 
-    data2, error2 = get_city_data(city_name2)
-    if error2:
+    if name1.casefold() == name2.casefold():
         return render_template(
             "index.html",
-            error=error2,
-            city1=city_name1,
-            city2=city_name2
+            error="Please enter two different cities.",
+            city_input1=name1,
+            city_input2=name2
         )
 
-    comparison = make_comparison(data1, data2)
+    city1, error = get_city_data(name1)
+    if error:
+        return render_template(
+            "index.html",
+            error=error,
+            city_input1=name1,
+            city_input2=name2
+        )
+
+    city2, error = get_city_data(name2)
+    if error:
+        return render_template(
+            "index.html",
+            error=error,
+            city_input1=name1,
+            city_input2=name2
+        )
 
     return render_template(
         "index.html",
-        city1=data1,
-        city2=data2,
-        comparison=comparison
+        city1=city1,
+        city2=city2,
+        comparison=make_comparison(city1, city2),
+        insights=make_insights(city1, city2)
     )
 
 
