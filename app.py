@@ -11,6 +11,23 @@ CACHE_DURATION = 600
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 
+# City population data: Census 2011, city proper figures.
+# Figures are not current population estimates.
+POPULATION_DATA = {
+    "mumbai": 12442373,
+    "pune": 3124458,
+    "nagpur": 2405665,
+    "nashik": 1486053,
+    "jaipur": 3046163,
+    "ahmedabad": 5570585,
+    "hyderabad": 6731790,
+    "chennai": 4646732,
+    "kolkata": 4496694,
+    "delhi": 11034555,
+    "bengaluru": 8443675,
+    "surat": 4462002
+}
+
 WEATHER_CODES = {
     0: "Clear sky",
     1: "Mainly clear",
@@ -51,23 +68,28 @@ def get_city_data(city):
             GEOCODING_URL,
             params={
                 "name": city,
-                "count": 1,
+                "count": 10,
                 "language": "en",
                 "format": "json"
             },
-            timeout=12
+            timeout=15
         )
-
-        if geo.status_code == 429:
-            return None, "Service is busy. Please try again later."
-
         geo.raise_for_status()
+
         results = geo.json().get("results") or []
 
         if not results:
-            return None, f"City not found: {city}"
+            app.logger.warning("City not found: %s", city)
+            return None, f"City not found: {city}. Check the spelling."
 
-        place = results[0]
+        # Prefer a result matching the entered city name.
+        place = next(
+            (
+                item for item in results
+                if item.get("name", "").casefold() == city.casefold()
+            ),
+            results[0]
+        )
 
         weather = requests.get(
             WEATHER_URL,
@@ -82,27 +104,26 @@ def get_city_data(city):
                 "timezone": "auto",
                 "forecast_days": 5
             },
-            timeout=15
+            timeout=20
         )
-
-        if weather.status_code == 429:
-            return None, "Service is busy. Please try again later."
-
         weather.raise_for_status()
+
         weather_data = weather.json()
         current = weather_data.get("current") or {}
 
-        population = place.get("population")
-        try:
-            population = float(population) if population is not None else None
-        except (TypeError, ValueError):
-            population = None
+        if not current:
+            app.logger.warning("No current weather returned for %s", city)
+            return None, f"Weather data unavailable for {city}. Try again later."
 
         code = current.get("weather_code")
+        resolved_name = place.get("name", city)
+
+        # Population is available only for cities in this reference dataset.
+        population = POPULATION_DATA.get(resolved_name.casefold())
 
         data = {
-            "name": place.get("name", city),
-            "city": place.get("name", city),
+            "name": resolved_name,
+            "city": resolved_name,
             "country": place.get("country", ""),
             "country_code": place.get("country_code", ""),
             "latitude": place.get("latitude"),
@@ -116,23 +137,33 @@ def get_city_data(city):
             "weather_description": WEATHER_CODES.get(
                 code, "Weather information unavailable"
             ),
-            "population": population
+            "population": population,
+            "population_year": 2011 if population is not None else None
         }
 
-        CITY_CACHE[key] = {
-            "time": now,
-            "data": data
-        }
-
+        CITY_CACHE[key] = {"time": now, "data": data}
         return data, None
 
-    except requests.RequestException as error:
-        app.logger.warning("API request failed: %s", error)
-        return None, "Weather service unavailable. Please try again."
+    except requests.HTTPError as error:
+        status = error.response.status_code if error.response is not None else None
+        app.logger.warning("HTTP error for %s: %s", city, status)
 
-    except (ValueError, KeyError, TypeError) as error:
-        app.logger.warning("Data processing failed: %s", error)
-        return None, "Could not process the data. Please try again."
+        if status == 429:
+            return None, "Weather service is busy. Please wait a minute and try again."
+
+        return None, f"Weather provider returned an error for {city}. Please try again."
+
+    except requests.Timeout:
+        app.logger.warning("Request timed out for city: %s", city)
+        return None, "The weather service took too long to respond. Please try again."
+
+    except requests.RequestException:
+        app.logger.exception("Network/API request failed for city: %s", city)
+        return None, "Could not connect to the weather service. Please try again."
+
+    except (ValueError, KeyError, TypeError):
+        app.logger.exception("Data processing failed for city: %s", city)
+        return None, "Weather data could not be processed. Please try again."
 
 
 def number(value):
@@ -151,21 +182,28 @@ def make_comparison(city1, city2):
         ("Wind Speed", "wind", "km/h"),
         ("Feels Like", "feels_like", "°C"),
         ("Precipitation", "precipitation", "mm"),
-        ("Population", "population", "people")
+        ("Population (Census 2011)", "population", "people")
     ]
 
     for label, key, unit in parameters:
         a = number(city1.get(key))
         b = number(city2.get(key))
 
-        if a is not None and b is not None:
-            rows.append({
-                "parameter": label,
-                "city1": round(a, 1),
-                "city2": round(b, 1),
-                "difference": round(abs(a - b), 1),
-                "unit": unit
-            })
+        if a is None or b is None:
+            # Don't compare missing population or weather values as zero.
+            continue
+
+        rows.append({
+            "parameter": label,
+            "city1": int(a) if key == "population" else round(a, 1),
+            "city2": int(b) if key == "population" else round(b, 1),
+            "difference": (
+                int(abs(a - b))
+                if key == "population"
+                else round(abs(a - b), 1)
+            ),
+            "unit": unit
+        })
 
     return rows
 
@@ -178,7 +216,7 @@ def make_insights(city1, city2):
         ("💧", "Humidity", "humidity", "%"),
         ("💨", "Wind Speed", "wind", "km/h"),
         ("🌧️", "Precipitation", "precipitation", "mm"),
-        ("👥", "Population", "population", "people")
+        ("👥", "Population (Census 2011)", "population", "people")
     ]
 
     for icon, label, key, unit in parameters:
@@ -188,17 +226,19 @@ def make_insights(city1, city2):
         if a is None or b is None:
             continue
 
-        if abs(a - b) < 0.05:
+        difference = abs(a - b)
+
+        if difference < 0.05:
             message = f"{label} is almost the same in both cities."
         elif a > b:
             message = (
                 f"{city1['name']} has a higher {label.lower()} "
-                f"than {city2['name']} by {abs(a-b):,.1f} {unit}."
+                f"than {city2['name']} by {difference:,.1f} {unit}."
             )
         else:
             message = (
                 f"{city2['name']} has a higher {label.lower()} "
-                f"than {city1['name']} by {abs(a-b):,.1f} {unit}."
+                f"than {city1['name']} by {difference:,.1f} {unit}."
             )
 
         insights.append({
