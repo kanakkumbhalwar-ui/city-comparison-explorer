@@ -18,9 +18,7 @@
             --border: #303d59;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -36,10 +34,7 @@
             padding: 35px 0 50px;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
+        header { text-align: center; margin-bottom: 30px; }
 
         .tag {
             display: inline-block;
@@ -51,19 +46,10 @@
             letter-spacing: 1px;
         }
 
-        h1 {
-            font-size: clamp(30px, 5vw, 48px);
-            margin: 17px 0 10px;
-        }
+        h1 { font-size: clamp(30px, 5vw, 48px); margin: 17px 0 10px; }
+        h1 span { color: var(--accent); }
 
-        h1 span {
-            color: var(--accent);
-        }
-
-        .subtitle {
-            color: var(--muted);
-            line-height: 1.6;
-        }
+        .subtitle { color: var(--muted); line-height: 1.6; }
 
         .panel {
             background: var(--panel);
@@ -74,14 +60,11 @@
             box-shadow: 0 12px 35px #00000018;
         }
 
-        h2 {
-            margin-top: 0;
-            font-size: 21px;
-        }
+        h2 { margin-top: 0; font-size: 21px; }
 
-        .search-grid {
+        .search-grid, .city-grid, .insight-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 16px;
         }
 
@@ -102,9 +85,7 @@
             font-size: 16px;
         }
 
-        input:focus {
-            outline: 2px solid var(--accent);
-        }
+        input:focus { outline: 2px solid var(--accent); }
 
         button {
             margin-top: 18px;
@@ -118,9 +99,7 @@
             font-size: 15px;
         }
 
-        button:hover {
-            opacity: .9;
-        }
+        button:hover { opacity: .9; }
 
         .error {
             background: #48232f;
@@ -131,28 +110,16 @@
             margin-bottom: 20px;
         }
 
-        .city-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 20px;
-        }
-
         .city-card {
             background: linear-gradient(145deg, #202e4b, #151d32);
             border: 1px solid var(--border);
             border-radius: 18px;
             padding: 23px;
+            min-width: 0;
         }
 
-        .city-name {
-            font-size: 25px;
-            margin: 0 0 5px;
-        }
-
-        .country {
-            color: var(--muted);
-            margin-bottom: 20px;
-        }
+        .city-name { font-size: 25px; margin: 0 0 5px; }
+        .country { color: var(--muted); margin-bottom: 20px; }
 
         .main-temp {
             font-size: 43px;
@@ -161,10 +128,7 @@
             margin: 12px 0;
         }
 
-        .condition {
-            color: var(--muted);
-            margin-bottom: 22px;
-        }
+        .condition { color: var(--muted); margin-bottom: 22px; }
 
         .metrics {
             display: grid;
@@ -191,13 +155,8 @@
             overflow-wrap: anywhere;
         }
 
-        .section-title {
-            margin-bottom: 18px;
-        }
-
-        .table-wrap {
-            overflow-x: auto;
-        }
+        .section-title { margin-bottom: 18px; }
+        .table-wrap { overflow-x: auto; }
 
         table {
             width: 100%;
@@ -211,36 +170,30 @@
             border-bottom: 1px solid var(--border);
         }
 
-        th {
-            color: var(--cyan);
-            font-size: 13px;
-        }
+        th { color: var(--cyan); font-size: 13px; }
+        td { font-size: 14px; }
 
-        td {
-            font-size: 14px;
-        }
-
-        .chart-row {
-            margin: 23px 0;
-        }
+        .chart-row { margin: 23px 0; }
 
         .chart-heading {
             display: flex;
             justify-content: space-between;
             gap: 12px;
+            flex-wrap: wrap;
             font-size: 14px;
             margin-bottom: 10px;
         }
 
-        .chart-heading span:last-child {
-            color: var(--muted);
-        }
+        .chart-heading span:last-child { color: var(--muted); }
 
         .bar-line {
             display: flex;
             height: 13px;
             gap: 4px;
             margin-bottom: 9px;
+            background: #0e1628;
+            border-radius: 8px;
+            overflow: hidden;
         }
 
         .bar {
@@ -250,13 +203,8 @@
             transition: width .3s;
         }
 
-        .bar-one {
-            background: var(--accent);
-        }
-
-        .bar-two {
-            background: var(--cyan);
-        }
+        .bar-one { background: var(--accent); }
+        .bar-two { background: var(--cyan); }
 
         .legend {
             display: flex;
@@ -275,12 +223,6 @@
             margin-right: 5px;
         }
 
-        .insight-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px;
-        }
-
         .insight {
             background: #0e1628;
             border: 1px solid var(--border);
@@ -288,10 +230,7 @@
             border-radius: 12px;
         }
 
-        .insight h3 {
-            font-size: 15px;
-            margin: 0 0 9px;
-        }
+        .insight h3 { font-size: 15px; margin: 0 0 9px; }
 
         .insight p {
             color: var(--muted);
@@ -307,10 +246,7 @@
             margin-top: 18px;
         }
 
-        .empty {
-            color: var(--muted);
-            line-height: 1.6;
-        }
+        .empty { color: var(--muted); line-height: 1.6; }
 
         footer {
             text-align: center;
@@ -320,24 +256,12 @@
         }
 
         @media (max-width: 650px) {
-            .container {
-                width: 94%;
-                padding-top: 22px;
-            }
-
-            .panel {
-                padding: 17px;
-            }
-
-            .search-grid,
-            .city-grid,
-            .insight-grid {
+            .container { width: 94%; padding-top: 22px; }
+            .panel { padding: 17px; }
+            .search-grid, .city-grid, .insight-grid {
                 grid-template-columns: 1fr;
             }
-
-            .main-temp {
-                font-size: 37px;
-            }
+            .main-temp { font-size: 37px; }
         }
     </style>
 </head>
@@ -349,50 +273,36 @@
         <div class="tag">LIVE WEATHER & CITY DATA</div>
         <h1>City <span>Comparison Explorer</span></h1>
         <p class="subtitle">
-            Compare weather conditions, population and key statistics
-            between two cities.
+            Compare weather conditions, population and key statistics between two cities.
         </p>
     </header>
 
     {% if error %}
-    <div class="error" role="alert">
-        {{ error }}
-    </div>
+    <div class="error" role="alert">{{ error }}</div>
     {% endif %}
 
     <section class="panel">
         <h2>🔎 Compare Two Cities</h2>
-        <p class="subtitle">
-            Enter two city names to explore their latest available data.
-        </p>
+        <p class="subtitle">Enter two city names to explore their latest available data.</p>
 
         <form action="{{ url_for('compare') }}" method="POST">
             <div class="search-grid">
                 <div>
                     <label for="city1">First City</label>
-                    <input
-                        id="city1"
-                        type="text"
-                        name="city1"
-                        placeholder="e.g. Nagpur"
-                        value="{{ city_input1 if city_input1 is defined else (city1.name if city1 is defined else '') }}"
-                        required
-                    >
+                    <input id="city1" type="text" name="city1"
+                           placeholder="e.g. Mumbai"
+                           value="{{ city_input1 if city_input1 is defined else (city1.name if city1 is defined else '') }}"
+                           required>
                 </div>
 
                 <div>
                     <label for="city2">Second City</label>
-                    <input
-                        id="city2"
-                        type="text"
-                        name="city2"
-                        placeholder="e.g. Pune"
-                        value="{{ city_input2 if city_input2 is defined else (city2.name if city2 is defined else '') }}"
-                        required
-                    >
+                    <input id="city2" type="text" name="city2"
+                           placeholder="e.g. Pune"
+                           value="{{ city_input2 if city_input2 is defined else (city2.name if city2 is defined else '') }}"
+                           required>
                 </div>
             </div>
-
             <button type="submit">Compare Cities →</button>
         </form>
     </section>
@@ -406,22 +316,15 @@
             {% for city in [city1, city2] %}
             <article class="city-card">
                 <h3 class="city-name">{{ city.name }}</h3>
-
-                <div class="country">
-                    {{ city.country or "Country unavailable" }}
-                </div>
+                <div class="country">{{ city.country or "Country unavailable" }}</div>
 
                 <div class="main-temp">
                     {% if city.temperature is not none %}
                         {{ "%.1f"|format(city.temperature|float) }}°C
-                    {% else %}
-                        N/A
-                    {% endif %}
+                    {% else %}N/A{% endif %}
                 </div>
 
-                <div class="condition">
-                    {{ city.weather_description or "Weather unavailable" }}
-                </div>
+                <div class="condition">{{ city.weather_description or "Weather unavailable" }}</div>
 
                 <div class="metrics">
                     <div class="metric">
@@ -429,31 +332,24 @@
                         <div class="metric-value">
                             {% if city.population is not none %}
                                 {{ "{:,.0f}".format(city.population|float) }}
-                            {% else %}
-                                N/A
-                            {% endif %}
+                            {% else %}N/A{% endif %}
                         </div>
+                        {% if city.population is not none %}
+                        <div class="note">Census reference: {{ city.population_year or 2011 }}</div>
+                        {% endif %}
                     </div>
 
                     <div class="metric">
                         <div class="metric-label">💧 Humidity</div>
                         <div class="metric-value">
-                            {% if city.humidity is not none %}
-                                {{ city.humidity }}%
-                            {% else %}
-                                N/A
-                            {% endif %}
+                            {% if city.humidity is not none %}{{ city.humidity }}%{% else %}N/A{% endif %}
                         </div>
                     </div>
 
                     <div class="metric">
                         <div class="metric-label">💨 Wind Speed</div>
                         <div class="metric-value">
-                            {% if city.wind is not none %}
-                                {{ city.wind }} km/h
-                            {% else %}
-                                N/A
-                            {% endif %}
+                            {% if city.wind is not none %}{{ city.wind }} km/h{% else %}N/A{% endif %}
                         </div>
                     </div>
 
@@ -462,20 +358,14 @@
                         <div class="metric-value">
                             {% if city.feels_like is not none %}
                                 {{ "%.1f"|format(city.feels_like|float) }}°C
-                            {% else %}
-                                N/A
-                            {% endif %}
+                            {% else %}N/A{% endif %}
                         </div>
                     </div>
 
                     <div class="metric">
                         <div class="metric-label">🌧️ Precipitation</div>
                         <div class="metric-value">
-                            {% if city.precipitation is not none %}
-                                {{ city.precipitation }} mm
-                            {% else %}
-                                N/A
-                            {% endif %}
+                            {% if city.precipitation is not none %}{{ city.precipitation }} mm{% else %}N/A{% endif %}
                         </div>
                     </div>
 
@@ -485,16 +375,12 @@
                             {% if city.latitude is not none and city.longitude is not none %}
                                 {{ "%.2f"|format(city.latitude|float) }},
                                 {{ "%.2f"|format(city.longitude|float) }}
-                            {% else %}
-                                N/A
-                            {% endif %}
+                            {% else %}N/A{% endif %}
                         </div>
                     </div>
                 </div>
 
-                <p class="note">
-                    Time zone: {{ city.timezone or "Unavailable" }}
-                </p>
+                <p class="note">Time zone: {{ city.timezone or "Unavailable" }}</p>
             </article>
             {% endfor %}
         </div>
@@ -519,21 +405,21 @@
                     <tr>
                         <td>{{ row.parameter }}</td>
                         <td>
-                            {% if row.parameter == "Population" %}
+                            {% if row.parameter == "Population (Census 2011)" %}
                                 {{ "{:,.0f}".format(row.city1|float) }}
                             {% else %}
                                 {{ row.city1 }} {{ row.unit }}
                             {% endif %}
                         </td>
                         <td>
-                            {% if row.parameter == "Population" %}
+                            {% if row.parameter == "Population (Census 2011)" %}
                                 {{ "{:,.0f}".format(row.city2|float) }}
                             {% else %}
                                 {{ row.city2 }} {{ row.unit }}
                             {% endif %}
                         </td>
                         <td>
-                            {% if row.parameter == "Population" %}
+                            {% if row.parameter == "Population (Census 2011)" %}
                                 {{ "{:,.0f}".format(row.difference|float) }}
                             {% else %}
                                 {{ row.difference }} {{ row.unit }}
@@ -545,14 +431,12 @@
             </table>
         </div>
         {% else %}
-        <p class="empty">
-            Comparison data is not available for these cities.
-        </p>
+        <p class="empty">Comparison data is not available for these cities.</p>
         {% endif %}
 
         <p class="note">
-            Population is shown only when the selected data source provides
-            a value. Population values may not be available for every city.
+            Population figures are 2011 Census reference figures for supported cities,
+            not current population estimates. Other cities may show N/A.
         </p>
     </section>
 
@@ -563,7 +447,7 @@
             ("Temperature", "temperature", "°C"),
             ("Humidity", "humidity", "%"),
             ("Wind Speed", "wind", "km/h"),
-            ("Population", "population", "people")
+            ("Population (Census 2011)", "population", "people")
         ] %}
 
         {% for label, key, unit in chart_items %}
@@ -582,29 +466,24 @@
                         <strong>{{ label }}</strong>
                         <span>
                             {% if key == "population" %}
-                                {{ "{:,.0f}".format(av) }} vs
-                                {{ "{:,.0f}".format(bv) }}
+                                {{ "{:,.0f}".format(av) }} vs {{ "{:,.0f}".format(bv) }}
                             {% else %}
                                 {{ av }} {{ unit }} vs {{ bv }} {{ unit }}
                             {% endif %}
                         </span>
                     </div>
 
-                    <div class="bar-line" aria-label="{{ label }} comparison">
+                    <div class="bar-line" aria-label="{{ city1.name }} {{ label }}">
                         <div class="bar bar-one" style="width:{{ wa }}%"></div>
                     </div>
-
-                    <div class="bar-line">
+                    <div class="bar-line" aria-label="{{ city2.name }} {{ label }}">
                         <div class="bar bar-two" style="width:{{ wb }}%"></div>
                     </div>
                 </div>
             {% else %}
                 <div class="chart-row">
                     <strong>{{ label }}</strong>
-                    <p class="empty">
-                        Chart unavailable because data is missing for one
-                        or both cities.
-                    </p>
+                    <p class="empty">Chart unavailable because data is missing for one or both cities.</p>
                 </div>
             {% endif %}
         {% endfor %}
@@ -628,14 +507,11 @@
             {% endfor %}
         </div>
         {% else %}
-        <p class="empty">
-            Insights will appear when enough comparison data is available.
-        </p>
+        <p class="empty">Insights will appear when enough comparison data is available.</p>
         {% endif %}
     </section>
 
     {% else %}
-
     <section class="panel">
         <h2>✨ Explore City Statistics</h2>
         <p class="empty">
@@ -644,7 +520,6 @@
             comparison charts and automatic insights.
         </p>
     </section>
-
     {% endif %}
 
     <footer>
